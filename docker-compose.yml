@@ -14,7 +14,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - /docker/volume/pg_data:/var/lib/postgresql/data
     networks:
       - traffy-network
 
@@ -61,31 +61,11 @@ services:
     networks:
       - traffy-network
 
-  # ------------------------------------------------
-  # 5. Processing: Spark + Jupyter Notebook
-  # ------------------------------------------------
-  spark-app:
-    build: ./spark
-    container_name: traffy-spark-notebook
-    ports:
-      - "8888:8888" # Port เข้า Jupyter
-      - "4040:4040" # Port ดู Spark UI
-    volumes:
-      - ./work:/home/jovyan/work # Map folder work ในเครื่องเรา เข้าไปใน container
-    environment:
-      - JUPYTER_ENABLE_LAB=yes
-    depends_on:
-      - postgres
-      - kafka
-      - redis
-    networks:
-      - traffy-network
 
-# สร้าง Network ให้ทุกตัวคุยกันได้
 networks:
   traffy-network:
     driver: bridge
 
-# สร้าง Volume ถาวรสำหรับเก็บข้อมูล Database (ปิดคอมข้อมูลไม่หาย)
+
 volumes:
   pg_data:
