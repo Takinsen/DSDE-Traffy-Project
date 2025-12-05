@@ -1,25 +1,9 @@
 version: '3.8'
 
 services:
-  # ------------------------------------------------
-  # 1. Database: PostgreSQL (Data Warehouse)
-  # ------------------------------------------------
-  postgres:
-    image: postgres:13-alpine
-    container_name: traffy-postgres
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: traffy_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - /docker/volume/pg_data:/var/lib/postgresql/data
-    networks:
-      - traffy-network
 
   # ------------------------------------------------
-  # 2. Staging: Redis (Temp Storage)
+  # 1. Staging: Redis (Temp Storage)
   # ------------------------------------------------
   redis:
     image: redis:alpine
@@ -30,10 +14,10 @@ services:
       - traffy-network
 
   # ------------------------------------------------
-  # 3. Kafka Manager: Zookeeper (Required for Kafka)
+  # 2. Kafka Manager: Zookeeper (Required for Kafka)
   # ------------------------------------------------
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.4.0
     container_name: traffy-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -42,10 +26,10 @@ services:
       - traffy-network
 
   # ------------------------------------------------
-  # 4. Streaming: Kafka (Message Broker)
+  # 3. Streaming: Kafka (Message Broker)
   # ------------------------------------------------
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.4.0
     container_name: traffy-kafka
     depends_on:
       - zookeeper
