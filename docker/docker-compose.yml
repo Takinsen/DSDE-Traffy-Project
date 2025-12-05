@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # ------------------------------------------------
+  # 1. Database: PostgreSQL (Data Warehouse)
+  # ------------------------------------------------
+  postgres:
+    image: postgres:13-alpine
+    container_name: traffy-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: traffy_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - traffy-network
+
+  # ------------------------------------------------
+  # 2. Staging: Redis (Temp Storage)
+  # ------------------------------------------------
+  redis:
+    image: redis:alpine
+    container_name: traffy-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - traffy-network
+
+  # ------------------------------------------------
+  # 3. Kafka Manager: Zookeeper (Required for Kafka)
+  # ------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: traffy-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - traffy-network
+
+  # ------------------------------------------------
+  # 4. Streaming: Kafka (Message Broker)
+  # ------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: traffy-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - traffy-network
+
+  # ------------------------------------------------
+  # 5. Processing: Spark + Jupyter Notebook
+  # ------------------------------------------------
+  spark-app:
+    build: ./spark
+    container_name: traffy-spark-notebook
+    ports:
+      - "8888:8888" # Port เข้า Jupyter
+      - "4040:4040" # Port ดู Spark UI
+    volumes:
+      - ./work:/home/jovyan/work # Map folder work ในเครื่องเรา เข้าไปใน container
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    depends_on:
+      - postgres
+      - kafka
+      - redis
+    networks:
+      - traffy-network
+
+# สร้าง Network ให้ทุกตัวคุยกันได้
+networks:
+  traffy-network:
+    driver: bridge
+
+# สร้าง Volume ถาวรสำหรับเก็บข้อมูล Database (ปิดคอมข้อมูลไม่หาย)
+volumes:
+  pg_data:
