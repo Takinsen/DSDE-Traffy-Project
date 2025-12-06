@@ -14,7 +14,7 @@ services:
       - traffy-network
 
   # ------------------------------------------------
-  # 2. Kafka Manager: Zookeeper (Required for Kafka)
+  # 2. Kafka Manager: Zookeeper 
   # ------------------------------------------------
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
@@ -45,6 +45,25 @@ services:
     networks:
       - traffy-network
 
+  spark-notebook:
+      image: jupyter/pyspark-notebook:latest
+      container_name: traffy-spark
+      user: root 
+      environment:
+        - JUPYTER_ENABLE_LAB=yes
+        - GRANT_SUDO=yes
+      ports:
+        - "8888:8888" 
+        - "4040:4040"
+      volumes:
+        - ./:/home/jovyan/work 
+      networks:
+        - traffy-network
+      # ⚠️ สำคัญ: ต้องไปตั้งค่าใน Docker Desktop > Settings > Resources ให้เกิน 4GB ด้วย
+      deploy:
+        resources:
+          limits:
+            memory: 4G
 
 networks:
   traffy-network:
