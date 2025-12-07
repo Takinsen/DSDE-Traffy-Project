@@ -4,7 +4,10 @@ from datetime import date, timedelta
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+import os 
 
+mapbox_api_key = 'pk.eyJ1IjoicGF0dGFwb24iLCJhIjoiY21panVqYWduMTd6bTNlcTJ6cTdjY2h0ZSJ9.zL4DH6cc-NwlORl58ktKlQ'
+os.environ["MAPBOX_API_KEY"] = mapbox_api_key
 st.set_page_config(page_title="Bangkok Traffy Tickets", layout="wide")
 st.title("🗺️ Bangkok Traffy Fondue Dashboard")
 st.caption("สำรวจปัญหาที่แจ้งผ่านระบบ Traffy Fondue พร้อมแผนที่ โหมดการกรอง และสถิติเชิงลึก")
