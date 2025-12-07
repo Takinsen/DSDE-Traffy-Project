@@ -69,7 +69,9 @@ PROJECT/
 │   │   └── spark_traffy.ipynb
 │   └── visualization/      # Streamlit Dashboard
 │       ├── streamlit.ipynb # (สำหรับ Test Code)
-│       └── my_app.py       # (ไฟล์หลักสำหรับรัน Dashboard)
+│       ├── my_app.py       # (ไฟล์หลักสำหรับรัน Dashboard)
+│       └── .streamlit/
+│           └── secrets.toml
 └── README.md
 ````
 
@@ -129,7 +131,8 @@ PROJECT/
 ### Step 5: Visualization (Streamlit)
 
 แสดงผลข้อมูลบน Dashboard
-
+  * สร้างโฟลเดอร์ .streamlit/secrets.toml 
+  * เพิ่ม mapbox api key
   * **Action:** เปิด Terminal (ที่ path หลักของ Project) แล้วรันคำสั่ง:
     ```bash
     streamlit run src/visualization/my_app.py
