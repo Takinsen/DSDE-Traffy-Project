@@ -6,8 +6,9 @@ import pydeck as pdk
 import streamlit as st
 import os 
 
-mapbox_api_key = 'pk.eyJ1IjoicGF0dGFwb24iLCJhIjoiY21panVqYWduMTd6bTNlcTJ6cTdjY2h0ZSJ9.zL4DH6cc-NwlORl58ktKlQ'
-os.environ["MAPBOX_API_KEY"] = mapbox_api_key
+if "mapbox" in st.secrets:
+    os.environ["MAPBOX_API_KEY"] = st.secrets["mapbox"]["public_token"]
+
 st.set_page_config(page_title="Bangkok Traffy Tickets", layout="wide")
 st.title("🗺️ Bangkok Traffy Fondue Dashboard")
 st.caption("สำรวจปัญหาที่แจ้งผ่านระบบ Traffy Fondue พร้อมแผนที่ โหมดการกรอง และสถิติเชิงลึก")
@@ -162,27 +163,104 @@ else:
         get_line_color=[0, 0, 0, 120],
     )
 
+    
+
     is_dark_map = map_style in {"Dark", "Satellite"}
     tooltip_bg = "rgba(30, 30, 30, 0.92)" if is_dark_map else "rgba(255, 255, 255, 0.95)"
     tooltip_text = "#DADADA" if is_dark_map else "#353535"
     tooltip_accent = "#FFFFFF" if is_dark_map else "#161616"
 
-    tooltip = {
+    tooltip_scatter = {
+    "html": f"""
+    <div style="padding:10px;border-radius:16px;background-color:{tooltip_bg};color:{tooltip_text};min-width:220px;">
+        <div style="font-size:16px;font-weight:700;color:{tooltip_accent};margin-bottom:6px;">Ticket {'{ticket_id}'}</div>
+        <div><strong>ประเภท:</strong> {{type}}</div>
+        <div><strong>สถานะ:</strong> {{state}}</div>
+        <div><strong>หน่วยงาน:</strong> {{organization}}</div>
+        <div><strong>เขต:</strong> {{district}}</div>
+        <div style="margin-top:6px;"><strong>รายละเอียด:</strong> {{comment}}</div>
+    </div>
+    """,
+    "style": {"backgroundColor": "transparent", "color": tooltip_text},
+    }
+
+    tooltip_hexagon = {
         "html": f"""
-        <div style="padding:10px;border-radius:16px;background-color:{tooltip_bg};color:{tooltip_text};min-width:220px;">
-            <div style="font-size:16px;font-weight:700;color:{tooltip_accent};margin-bottom:6px;">Ticket { '{ticket_id}' }</div>
-            <div><strong>ประเภท:</strong> {{type}}</div>
-            <div><strong>สถานะ:</strong> {{state}}</div>
-            <div><strong>หน่วยงาน:</strong> {{organization}}</div>
-            <div><strong>เขต:</strong> {{district}}</div>
-            <div style="margin-top:6px;"><strong>รายละเอียด:</strong> {{comment}}</div>
+        <div style="padding:10px;border-radius:16px;background-color:{tooltip_bg};color:{tooltip_text};min-width:150px;">
+            <div style="font-size:16px;font-weight:700;color:{tooltip_accent};margin-bottom:6px;">พื้นที่หนาแน่น</div>
+            <div><strong>จำนวนเรื่องร้องเรียน:</strong> {{elevationValue}} เรื่อง</div>
+            <div style="font-size:12px;color:grey;margin-top:4px;">(พิกัด: {{position}})</div>
         </div>
         """,
         "style": {"backgroundColor": "transparent", "color": tooltip_text},
     }
 
-    deck = pdk.Deck(map_style=MAP_STYLES[map_style], initial_view_state=view_state, layers=[scatter_layer], tooltip=tooltip)
-    st.pydeck_chart(deck, use_container_width=True)
+    # Create a toggle for layer type
+    layer_type = st.sidebar.radio("รูปแบบการแสดงผลแผนที่", ["จุด (Scatter)", "ความหนาแน่น (Hexagon)", "ความร้อน (Heatmap)"])
+
+    layers = []
+
+    if layer_type == "จุด (Scatter)":
+        layers.append(
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=display_df,
+                get_position="[longitude, latitude]",
+                get_radius=point_radius,
+                get_fill_color="state_color",
+                pickable=True,
+                stroked=True,
+                get_line_color=[0, 0, 0, 120],
+            )
+        )
+
+    elif layer_type == "ความหนาแน่น (Hexagon)":
+        layers.append(
+            pdk.Layer(
+                "HexagonLayer",
+                data=display_df,
+                get_position="[longitude, latitude]",
+                radius=200,          # Size of hexagons
+                elevation_scale=2,   # Height multiplier
+                elevation_range=[0, 1000],
+                pickable=True,
+                extruded=True,       # Make them 3D
+            )
+        )
+
+    elif layer_type == "ความร้อน (Heatmap)":
+        layers.append(
+            pdk.Layer(
+                "HeatmapLayer",
+                data=display_df,
+                get_position="[longitude, latitude]",
+                opacity=0.9,
+                get_weight=1,
+                radius_pixels=50,    # Adjust for smoothness
+            )
+        )
+
+    if layer_type == "จุด (Scatter)":
+        current_tooltip = tooltip_scatter
+    else:
+        current_tooltip = tooltip_hexagon
+
+    deck = pdk.Deck(
+    map_style=MAP_STYLES[map_style], 
+    initial_view_state=view_state, 
+    layers=layers, 
+    tooltip=current_tooltip 
+)
+    
+st.subheader("แนวโน้มการแจ้งปัญหาตามช่วงเวลา")
+# Resample data by day to count tickets over time
+daily_counts = display_df.set_index("timestamp_dt").resample("D").size().rename("Ticket Count")
+
+if not daily_counts.empty:
+    st.line_chart(daily_counts, use_container_width=True)
+else:
+    st.info("ไม่เพียงพอสำหรับการแสดงกราฟเส้น")
+st.pydeck_chart(deck, use_container_width=True)
 
 st.subheader("สถิติภาพรวม")
 col1, col2, col3 = st.columns(3)
